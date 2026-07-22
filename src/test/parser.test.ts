@@ -73,3 +73,21 @@ test('round-trip preserves exact original markdown when unchanged', () => {
 
   assert.equal(written.value, sampleMarkdown);
 });
+
+test('parseMarkdown returns timeout error when regex budget is exceeded', () => {
+  let tick = 0;
+  const result = parseMarkdown(sampleMarkdown, {
+    timeoutMs: 250,
+    now: () => {
+      tick += 300;
+      return tick;
+    },
+  });
+
+  assert.equal(result.ok, false);
+  if (result.ok) {
+    return;
+  }
+
+  assert.equal(result.error.code, 'REGEX_TIMEOUT');
+});

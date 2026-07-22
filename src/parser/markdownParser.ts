@@ -2,21 +2,34 @@ import { createEmptyBoard, normalizeBoard, type Board, type Card, type ColumnNam
 import { err, ok, type Result } from '../shared/result.js';
 
 export interface ParseError {
-  code: 'INVALID_FRONTMATTER' | 'INVALID_SECTION' | 'INVALID_CARD' | 'UNKNOWN_ERROR';
+  code: 'INVALID_FRONTMATTER' | 'INVALID_SECTION' | 'INVALID_CARD' | 'REGEX_TIMEOUT' | 'UNKNOWN_ERROR';
   message: string;
   line?: number;
   column?: number;
 }
 
+export interface ParseOptions {
+  timeoutMs?: number;
+  now?: () => number;
+}
+
 type FrontmatterMap = Record<string, string>;
 
-function parseFrontmatter(lines: string[]): Result<{ data: FrontmatterMap; endLine: number }, ParseError> {
+function parseFrontmatter(
+  lines: string[],
+  checkTimeout: (line: number) => ParseError | undefined,
+): Result<{ data: FrontmatterMap; endLine: number }, ParseError> {
   if (lines[0] !== '---') {
     return err({ code: 'INVALID_FRONTMATTER', message: 'frontmatter must start with ---', line: 1 });
   }
 
   const data: FrontmatterMap = {};
   for (let lineIndex = 1; lineIndex < lines.length; lineIndex += 1) {
+    const timeoutError = checkTimeout(lineIndex + 1);
+    if (timeoutError) {
+      return err(timeoutError);
+    }
+
     const line = lines[lineIndex]!;
     if (line === '---') {
       return ok({ data, endLine: lineIndex });
@@ -44,7 +57,16 @@ function parseDate(value: string): Date | undefined {
   return Number.isNaN(parsed.getTime()) ? undefined : parsed;
 }
 
-function parseCardLines(cardLines: string[], cardStartLine: number): Result<Card, ParseError> {
+function parseCardLines(
+  cardLines: string[],
+  cardStartLine: number,
+  checkTimeout: (line: number) => ParseError | undefined,
+): Result<Card, ParseError> {
+  const timeoutBeforeHead = checkTimeout(cardStartLine);
+  if (timeoutBeforeHead) {
+    return err(timeoutBeforeHead);
+  }
+
   const head = cardLines[0]!;
   const match = /^- \[( |x)\] (.+)$/.exec(head);
   if (match === null) {
@@ -60,6 +82,11 @@ function parseCardLines(cardLines: string[], cardStartLine: number): Result<Card
   let notes: string | undefined;
 
   for (let index = 1; index < cardLines.length; index += 1) {
+    const timeoutError = checkTimeout(cardStartLine + index);
+    if (timeoutError) {
+      return err(timeoutError);
+    }
+
     const line = cardLines[index]!.trim();
     const separatorIndex = line.indexOf(':');
     if (separatorIndex < 0) {
@@ -118,14 +145,29 @@ function parseSectionName(line: string): ColumnName | undefined {
   return undefined;
 }
 
-export function parseMarkdown(text: string): Result<Board, ParseError> {
+export function parseMarkdown(text: string, options: ParseOptions = {}): Result<Board, ParseError> {
   try {
+    const timeoutMs = options.timeoutMs ?? 250;
+    const now = options.now ?? Date.now;
+    const startedAt = now();
+
+    const checkTimeout = (line: number): ParseError | undefined => {
+      if (now() - startedAt > timeoutMs) {
+        return {
+          code: 'REGEX_TIMEOUT',
+          message: `regex evaluation timed out after ${timeoutMs}ms`,
+          line,
+        };
+      }
+      return undefined;
+    };
+
     const lines = text.split(/\r?\n/);
     if (lines.length === 0 || lines[0] !== '---') {
       return err({ code: 'INVALID_FRONTMATTER', message: 'frontmatter missing', line: 1 });
     }
 
-    const frontmatter = parseFrontmatter(lines);
+    const frontmatter = parseFrontmatter(lines, checkTimeout);
     if (!frontmatter.ok) {
       return frontmatter;
     }
@@ -149,6 +191,11 @@ export function parseMarkdown(text: string): Result<Board, ParseError> {
     let index = frontmatter.value.endLine + 1;
 
     while (index < lines.length) {
+      const timeoutError = checkTimeout(index + 1);
+      if (timeoutError) {
+        return err(timeoutError);
+      }
+
       const line = lines[index]!;
       const sectionName = parseSectionName(line);
       if (sectionName !== undefined) {
@@ -177,7 +224,7 @@ export function parseMarkdown(text: string): Result<Board, ParseError> {
           break;
         }
 
-        const parsedCard = parseCardLines(cardLines, index + 1);
+        const parsedCard = parseCardLines(cardLines, index + 1, checkTimeout);
         if (!parsedCard.ok) {
           return parsedCard;
         }

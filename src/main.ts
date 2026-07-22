@@ -6,7 +6,7 @@ import { CardModal } from './presentation/cardModal.js';
 import { ConfirmModal } from './presentation/confirmModal.js';
 import { KanbanView } from './presentation/kanbanView.js';
 import { FileSelectModal } from './presentation/fileSelectModal.js';
-import { createSyncContext, queueKanbanChange, setError } from './sync/syncEngine.js';
+import { createSyncContext, finishSync, queueKanbanChange, setError, startSync, type SyncContext } from './sync/syncEngine.js';
 
 export default class WeeklyKanbanPlugin extends Plugin {
   private currentFile?: TFile;
@@ -20,6 +20,10 @@ export default class WeeklyKanbanPlugin extends Plugin {
   private readonly markdownToKanbanDebounceMs = 500;
 
   private skipNextModifyPath: string | undefined;
+
+  private statusBarEl: HTMLElement | undefined;
+
+  private syncContext: SyncContext = createSyncContext();
 
   async onload(): Promise<void> {
     this.registerView(KanbanView.viewType, (leaf) => {
@@ -53,6 +57,24 @@ export default class WeeklyKanbanPlugin extends Plugin {
       }),
     );
 
+    this.registerEvent(
+      this.app.workspace.on('file-menu', (menu, file) => {
+        if (!(file instanceof TFile) || !this.isMarkdownFile(file)) {
+          return;
+        }
+
+        menu.addItem((item) => {
+          item.setTitle('Open Weekly Kanban');
+          item.onClick(() => {
+            void this.openKanbanView(file);
+          });
+        });
+      }),
+    );
+
+    this.statusBarEl = this.addStatusBarItem();
+    this.updateSyncContext(createSyncContext(), { forceRender: true });
+
     this.addRibbonIcon('kanban', 'Open Weekly Kanban', () => {
       void this.openKanbanView();
     });
@@ -82,8 +104,8 @@ export default class WeeklyKanbanPlugin extends Plugin {
     });
   }
 
-  private async openKanbanView(): Promise<void> {
-    const file = await this.resolveTargetFile();
+  private async openKanbanView(targetFile?: TFile): Promise<void> {
+    const file = targetFile ?? this.currentFile ?? (await this.resolveTargetFile({ forceSelect: true }));
     if (!file) {
       return;
     }
@@ -124,19 +146,7 @@ export default class WeeklyKanbanPlugin extends Plugin {
     }
 
     const sourceBoard = this.currentBoard ?? parsed.value;
-    const updated = writeMarkdown(contents, sourceBoard);
-    if (!updated.ok) {
-      new Notice(updated.error.message);
-      return;
-    }
-
-    this.skipNextModifyPath = this.currentFile.path;
-    await this.app.vault.modify(this.currentFile, updated.value);
-    const reparsed = parseMarkdown(updated.value);
-    if (reparsed.ok) {
-      this.currentBoard = reparsed.value;
-    }
-    new Notice('Weekly file saved');
+    await this.persistBoard(sourceBoard, 'Weekly file saved');
   }
 
   private async handleAddCard(columnName: ColumnName): Promise<void> {
@@ -389,28 +399,23 @@ export default class WeeklyKanbanPlugin extends Plugin {
   }
 
   private async loadFileIntoView(file: TFile): Promise<void> {
+    this.updateSyncContext(startSync(createSyncContext(this.currentBoard, file.path)));
+
     const contents = await this.app.vault.read(file);
     const parsed = parseMarkdown(contents);
 
     if (!parsed.ok) {
       new Notice(parsed.error.message);
       const errorContext = setError(createSyncContext(undefined, file.path), parsed.error.message);
-      this.currentView?.updateState({
-        path: file.path,
-        board: undefined,
-        syncContext: errorContext,
-      });
+      this.updateSyncContext(errorContext, { path: file.path });
       return;
     }
 
     const syncContext = createSyncContext(parsed.value, file.path);
     const boardContext = queueKanbanChange(syncContext, { type: 'board-loaded', board: parsed.value, path: file.path });
+    const doneContext = finishSync(startSync(boardContext), parsed.value);
     this.currentBoard = parsed.value;
-    this.currentView?.updateState({
-      path: file.path,
-      board: parsed.value,
-      syncContext: boardContext,
-    });
+    this.updateSyncContext(doneContext, { path: file.path, board: parsed.value });
     this.currentFile = file;
   }
 
@@ -518,9 +523,14 @@ export default class WeeklyKanbanPlugin extends Plugin {
       return;
     }
 
+    const syncingContext = startSync(createSyncContext(board, file.path));
+    this.updateSyncContext(syncingContext, { path: file.path, board });
+
     const original = await this.app.vault.read(file);
     const written = writeMarkdown(original, board);
     if (!written.ok) {
+      const errorContext = setError(syncingContext, written.error.message);
+      this.updateSyncContext(errorContext, { path: file.path, board });
       new Notice(written.error.message);
       return;
     }
@@ -531,11 +541,8 @@ export default class WeeklyKanbanPlugin extends Plugin {
     this.currentBoard = reparsed.ok ? reparsed.value : board;
     this.currentFile = file;
 
-    this.currentView?.updateState({
-      path: file.path,
-      board: this.currentBoard,
-      syncContext: createSyncContext(this.currentBoard, file.path),
-    });
+    const doneContext = finishSync(syncingContext, this.currentBoard);
+    this.updateSyncContext(doneContext, { path: file.path, board: this.currentBoard });
 
     new Notice(successMessage);
   }
@@ -561,6 +568,63 @@ export default class WeeklyKanbanPlugin extends Plugin {
     this.pendingReloadTimer = setTimeout(() => {
       void this.loadFileIntoView(file);
     }, this.markdownToKanbanDebounceMs);
+  }
+
+  private isMarkdownFile(file: TFile): boolean {
+    return file.path.toLowerCase().endsWith('.md');
+  }
+
+  private updateSyncContext(
+    context: SyncContext,
+    payload?: {
+      path?: string;
+      board?: Board;
+      forceRender?: boolean;
+    },
+  ): void {
+    this.syncContext = context;
+
+    const path = payload?.path ?? this.currentFile?.path;
+    const board = payload?.board ?? this.currentBoard;
+
+    if (payload?.forceRender || this.currentView) {
+      this.currentView?.updateState({
+        path,
+        board,
+        syncContext: this.syncContext,
+      });
+    }
+
+    this.updateStatusBar(path, this.syncContext);
+  }
+
+  private updateStatusBar(path: string | undefined, context: SyncContext): void {
+    if (!this.statusBarEl) {
+      return;
+    }
+
+    const fileLabel = path ? path.split('/').pop() ?? path : 'no target';
+    const lastSyncLabel = context.lastSyncTime ? context.lastSyncTime.toLocaleTimeString() : 'never';
+
+    if (context.state === 'syncing') {
+      this.statusBarEl.setText(`Weekly Kanban: Syncing (${fileLabel})`);
+    } else if (context.state === 'error') {
+      this.statusBarEl.setText(`Weekly Kanban: Error (${fileLabel})`);
+    } else if (context.state === 'conflict') {
+      this.statusBarEl.setText(`Weekly Kanban: Conflict (${fileLabel})`);
+    } else {
+      this.statusBarEl.setText(`Weekly Kanban: Idle (${fileLabel})`);
+    }
+
+    const detailLines = [`Target: ${path ?? 'not selected'}`, `Last sync: ${lastSyncLabel}`];
+    if (context.errorMessage) {
+      detailLines.push(`Error: ${context.errorMessage}`);
+    }
+    if (context.conflictMessage) {
+      detailLines.push(`Conflict: ${context.conflictMessage}`);
+    }
+    this.statusBarEl.setAttribute('aria-label', detailLines.join(' | '));
+    this.statusBarEl.title = detailLines.join('\n');
   }
 }
 

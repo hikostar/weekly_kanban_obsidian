@@ -86,7 +86,18 @@ export class KanbanView extends ItemView {
     targetFile.setText(this.state.path ? `Target: ${this.state.path}` : 'Target: not selected');
 
     const status = this.containerEl.createDiv('weekly-kanban-status');
-    status.setText(`Status: ${this.state.syncContext.state}`);
+    const lastSync = this.state.syncContext.lastSyncTime
+      ? this.state.syncContext.lastSyncTime.toLocaleTimeString()
+      : 'never';
+    status.setText(`Status: ${this.state.syncContext.state} (last sync: ${lastSync})`);
+
+    if (this.state.syncContext.errorMessage) {
+      this.containerEl.createDiv('weekly-kanban-status-error').setText(`Error: ${this.state.syncContext.errorMessage}`);
+    }
+
+    if (this.state.syncContext.conflictMessage) {
+      this.containerEl.createDiv('weekly-kanban-status-conflict').setText(`Conflict: ${this.state.syncContext.conflictMessage}`);
+    }
 
     if (this.state.syncContext.state === 'error' && this.state.syncContext.errorMessage) {
       new Notice(this.state.syncContext.errorMessage);
