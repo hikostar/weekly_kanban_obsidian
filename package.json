@@ -1,0 +1,19 @@
+{
+  "name": "weekly_kanban_obsidian",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "build": "npm run build:check && npm run build:plugin",
+    "build:check": "tsc -p tsconfig.json --noEmit",
+    "build:plugin": "esbuild src/main.ts --bundle --platform=node --format=cjs --target=es2020 --external:obsidian --outfile=dist/main.js",
+    "check": "tsc -p tsconfig.json --noEmit",
+    "test": "node --test --import tsx src/test/domain.test.ts src/test/parser.test.ts src/test/sync.test.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "esbuild": "^0.28.1",
+    "obsidian": "^1.8.10",
+    "tsx": "^4.19.1",
+    "typescript": "^5.5.4"
+  }
+}

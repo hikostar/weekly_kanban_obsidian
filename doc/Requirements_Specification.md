@@ -56,7 +56,7 @@
 ### 4.4 コマンド・UI
 
 - FR-CMD-01: Open Kanban View コマンドで Kanban ビューを開けること。
-- FR-CMD-02: Open Weekly File コマンドで週次 Markdown を開けること。候補が複数ある場合はファイル選択モーダルを表示すること。
+- FR-CMD-02: Open Weekly File コマンドで週次 Markdown の対象を選択できること。候補が複数ある場合はファイル選択モーダルを表示すること。
 - FR-CMD-03: Kanban カードをクリックして Markdown 内の対応行へジャンプできること。
 - FR-CMD-04: ステータスに同期状態（成功 / 失敗）を表示できること。現在対象の Markdown ファイルを識別できること。
 - FR-CMD-05: ユーザーはファイルメニューやコンテキストメニューから対象ファイルの Kanban ビューを開けること。
@@ -105,7 +105,7 @@
 - AC-CMD-01:
   - Given コマンドパレットまたはリボン操作
   - When Open Kanban View または Open Weekly File を実行する
-  - Then 対応するビューまたはファイルが開く
+  - Then Open Kanban View は対応するビューを開き、Open Weekly File は対象ファイルを選択状態にする
 
 - AC-CMD-02:
   - Given Kanban カードが表示されている

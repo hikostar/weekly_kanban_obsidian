@@ -1,0 +1,10 @@
+{
+  "id": "weekly-kanban",
+  "name": "Weekly Kanban",
+  "version": "0.1.0",
+  "minAppVersion": "1.4.0",
+  "description": "Weekly Kanban for Obsidian",
+  "author": "weekly-kanban-obsidian-team",
+  "authorUrl": "https://github.com/hikos/weekly_kanban_obsidian",
+  "isDesktopOnly": false
+}

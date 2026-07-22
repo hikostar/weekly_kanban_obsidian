@@ -12,29 +12,30 @@
 | 項目 | 値 |
 |------|-----|
 | 対象バージョン | v0.1.0 |
-| Build | 未実施 |
-| Tests | 未実施 |
-| Parser Coverage | 未実施 |
-| Domain Coverage | 未実施 |
-| Overall Coverage | 未実施 |
-| Sync Coverage | 未実施 |
+| Build | Pass |
+| Tests | Pass |
+| Parser Coverage | Unit tests added |
+| Domain Coverage | Unit tests added |
+| Overall Coverage | Partial |
+| Sync Coverage | Unit tests added |
 | UI Coverage | 未実施 |
-| 総合判定 | Draft |
+| 総合判定 | Partial Pass |
 
 ## 3. Quality Gates
 
 ### 3.1 Build Quality
 
-- TypeScript Compilation: no errors.
-- Lint: no violations.
-- Bundle / packaging: plugin package built successfully.
+- TypeScript Compilation: no errors. Pass (`npm run build`).
+- Lint: not yet configured.
+- Bundle / packaging: not yet configured.
 
 ### 3.2 Test Quality
 
-- Unit tests pass.
-- Parser coverage meets target.
-- Domain coverage meets target.
-- Overall coverage meets target.
+- Unit tests pass. Pass (`npm test`).
+- Parser unit tests added for frontmatter, section parsing, and exact round-trip preservation.
+- Domain unit tests added for 3-column invariant, duplicate card ID rejection, move/toggle operations.
+- Sync unit tests added for queueing, debounce window, and conflict rejection.
+- Overall coverage target not yet measured.
 
 ### 3.3 Performance Quality
 
@@ -49,8 +50,8 @@
 
 | ID | 要求 | 検証観点 | 状態 |
 |----|------|----------|------|
-| FR-MD-01 | Frontmatter + セクション形式を開ける | 通常系 / 異常系 / 境界系 | Draft |
-| FR-MD-02 | 週情報を持つ | 通常系 / 異常系 | Draft |
+| FR-MD-01 | Frontmatter + セクション形式を開ける | 通常系 / 異常系 / 境界系 | Partial |
+| FR-MD-02 | 週情報を持つ | 通常系 / 異常系 | Partial |
 | FR-MD-03 | 直接編集できる | Obsidian 標準動作確認 | Draft |
 | FR-MD-04 | 保存時に更新される | 保存イベント連携 | Draft |
 
@@ -71,21 +72,21 @@
 
 | ID | 要求 | 検証観点 | 状態 |
 |----|------|----------|------|
-| FR-SYNC-01 | Markdown → Kanban | 通常系 / 異常系 | Draft |
-| FR-SYNC-02 | Kanban → Markdown 要求生成 | 通常系 | Draft |
-| FR-SYNC-03 | debounce 後の反映 | 境界系 | Draft |
+| FR-SYNC-01 | Markdown → Kanban | 通常系 / 異常系 | Partial |
+| FR-SYNC-02 | Kanban → Markdown 要求生成 | 通常系 | Partial |
+| FR-SYNC-03 | debounce 後の反映 | 境界系 | Partial |
 | FR-SYNC-04 | 失敗通知 | 異常系 | Draft |
 
 ### 4.4 Command and UI
 
 | ID | 要求 | 検証観点 | 状態 |
 |----|------|----------|------|
-| FR-CMD-01 | Open Kanban View | 通常系 | Draft |
-| FR-CMD-02 | Open Weekly File | 通常系 / 異常系 | Draft |
+| FR-CMD-01 | Open Kanban View | 通常系 | Partial |
+| FR-CMD-02 | Open Weekly File | 通常系 / 異常系 | Partial |
 | FR-CMD-03 | カードクリックでジャンプ | 通常系 / 境界系 | Draft |
-| FR-CMD-04 | ステータス表示 | 通常系 / 異常系 | Draft |
+| FR-CMD-04 | ステータス表示 | 通常系 / 異常系 | Partial |
 | FR-CMD-05 | メニューから起動 | 通常系 | Draft |
-| FR-CMD-06 | リボン / コマンド起動 | 通常系 | Draft |
+| FR-CMD-06 | リボン / コマンド起動 | 通常系 | Partial |
 
 ## 5. Test Plan
 
@@ -94,31 +95,41 @@
 - Frontmatter 抽出。
 - セクション認識。
 - カードの reversible parse/write。
+- Exact round-trip preservation for unchanged markdown.
 
 ### 5.2 Sync Integration Tests
 
 - Vault change → view update。
 - view change → save。
 - conflict handling。
+- Debounce window behavior.
 
-### 5.3 UI Component Tests
+### 5.3 Domain Unit Tests
+
+- 3 列不変条件。
+- duplicate card id rejection.
+- move / toggle behavior.
+
+### 5.4 UI Component Tests
 
 - ItemView の 3 列表示。
 - Modal の開閉と入力。
 - drag and drop。
 
-### 5.4 Entry Point Tests
+### 5.5 Entry Point Tests
 
 - コマンドパレット起動。
 - リボン起動。
 - ファイルメニュー起動。
 
-### 5.5 Performance Tests
+### 5.6 Performance Tests
 
 - 大容量ファイル解析。
 - 1000 カード描画。
 
 ## 6. Known Gaps
 
-- まだ実装がないため結果欄は Draft のみ。
+- Presentation の実描画、カード操作モーダル、ファイル選択モーダルの実 UI は未実装。
+- Vault 監視による自動同期と保存イベント連携は未実装。
+- lint / coverage / performance 計測は未実施。
 - 参照元仕様（VS Code 版）からの移植差分が大きい領域は、まず要求と設計の整合を確定してから実装する。
