@@ -7,7 +7,7 @@ description: 'ドキュメント調査、実装支援、テスト設計・実行
 
 ## 目的
 
-Weekly Kanban VS Code Extension の作業を支援する。対象はドキュメント調査、ドキュメント作成、実装支援、テスト設計・実行であり、PR レビューは対象外とする。
+Weekly Kanban Obsidian Plugin の作業を支援する。対象はドキュメント調査、ドキュメント作成、実装支援、テスト設計・実行であり、PR レビューは対象外とする。
 
 ## 入力
 
@@ -33,7 +33,7 @@ Weekly Kanban VS Code Extension の作業を支援する。対象はドキュメ
 
 ## 注意
 
-1. src/domain ↔ src/parser ↔ src/sync ↔ src/webview ↔ src/extension の依存方向を壊さない。
+1. src/domain ↔ src/parser ↔ src/sync ↔ src/presentation ↔ src/main.ts の依存方向を壊さない。
 2. Domain 層の全操作は immutable（spread operator による新規生成）を保つ。
 3. Parser の可逆性（コメント、空白、未知の YAML キーの保存）を損なわない。
 4. 設計制約と検証要件は `doc/Design_Specification.md` と `doc/Verification_Spec&Result.md` を優先する。

@@ -1,6 +1,6 @@
 # Obsidian 仕様書セット
 
-このフォルダは、Weekly Kanban の Obsidian 版ユーザー拡張に関する正本の仕様書セットです。元になった VS Code 版の仕様は `doc_vscode/` に残し、このフォルダでは Obsidian の API と利用導線に合わせて再構築しています。
+このフォルダは、Weekly Kanban の Obsidian 版プラグインに関する正本の仕様書セットです。元になった VS Code 版の仕様は `doc_vscode/` に残し、このフォルダでは Obsidian の API と利用導線に合わせて再構築しています。
 
 ## 文書一覧
 

@@ -33,8 +33,8 @@ AI支援の有無:
 - domain 層:
 - parser 層:
 - sync 層:
-- webview 層:
-- extension 層:
+- presentation 層:
+- plugin 層:
 
 ドキュメント更新:
 
@@ -66,11 +66,11 @@ Quality Gate への引き継ぎ事項:
 ## 出力サンプル
 
 ```markdown
-[Sync] Add status bar verification evidence
+[Sync] Add sync-state verification evidence
 
 ## Description
 
-sync status bar の状態遷移と検証証跡整理を強化し、PR から Requirement / TP / gap を追跡できるようにした。
+sync state の状態遷移と検証証跡整理を強化し、PR から Requirement / TP / gap を追跡できるようにした。
 
 ## Related Issues
 
@@ -80,15 +80,15 @@ Relates to: FR-CMD-04, FR-SYNC-04, NFR-ACC-01
 
 | Requirement ID / AC / NFR | Changed Files | Test Evidence (TP-*) | Status |
 |---------------------------|---------------|-----------------------|--------|
-| FR-CMD-04 | src/extension.ts, src/test/ui.test.ts | TP-U-16 | Partial |
+| FR-CMD-04 | src/main.ts, src/test/ui.test.ts | TP-U-16 | Partial |
 | FR-SYNC-04 | src/sync/syncEngine.ts, src/test/sync.test.ts | TP-S-16 | Verified |
-| NFR-ACC-01 | src/webview/webviewContent.ts, src/test/ui.test.ts | TP-U-17 | Partial |
+| NFR-ACC-01 | src/presentation/kanbanView.ts, src/test/ui.test.ts | TP-U-17 | Partial |
 
 ## Verification Coverage Design
 
 | Scenario Type | Covered? | Evidence |
 |---------------|----------|----------|
-| Normal | [x] | status bar success transition / TP-U-16 |
+| Normal | [x] | sync state success transition / TP-U-16 |
 | Error | [x] | sync failure message propagation / TP-S-16 |
 | Boundary | [ ] | file switch edge case deferred to manual check |
 
@@ -102,7 +102,7 @@ Relates to: FR-CMD-04, FR-SYNC-04, NFR-ACC-01
 ## AI-Assisted Changes Verification
 
 - AI Tool Used: GitHub Copilot
-- Human Review: status bar state labels and tooltip updates reviewed
+- Human Review: sync state labels and tooltip updates reviewed
 - Build Status: ✓ PASS
 - Test Status: ✓ PASS
 - Verification Date: 2026-07-04 12:00 UTC

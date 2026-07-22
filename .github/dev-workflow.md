@@ -45,7 +45,7 @@
 **出力物**:
 - 仕様整合性確認結果
 - 対象要件ID マッピング
-- 影響を受ける層（domain/parser/sync/webview/extension）
+- 影響を受ける層（domain/parser/sync/presentation/plugin）
 - テスト対象候補
 
 **判定**:
@@ -301,7 +301,7 @@ Relates to: [要件ID]
 - ✓ Save-to-sync cycle: < 500ms
 
 ### Architecture Compliance
-- ✓ No reverse dependency (Extension ← Sync/Webview ← Parser ← Domain)
+- ✓ No reverse dependency (Plugin ← Presentation/Sync ← Parser ← Domain)
 - ✓ Immutability: Domain operations use spread operator only
 - ✓ Reversibility: Parser preserves comments, whitespace, unknown YAML keys
 - ✓ Error Handling: Result<T> type used, no throws on invalid input

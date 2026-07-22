@@ -33,7 +33,7 @@ Based on pull-request-review findings, route to specialized agents:
 ```
 @design-review Design Review Agent
 PR Summary: [feature being reviewed]
-Impacted Layers: [domain/parser/sync/webview/extension]
+Impacted Layers: [domain/parser/sync/presentation/plugin]
 Design Concern: [specific alignment issue from review]
 Request: Assess specification compliance
 ```

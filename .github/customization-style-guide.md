@@ -34,7 +34,7 @@
 
 - `.github/` 配下から `doc/` を参照するときは `../doc/...` を使う
 - `.github/` 配下から同階層ファイルを参照するときは `.github/...` ではなく相対パスを使う。例: `AGENTS.md`
-- 依存方向や責務境界は Weekly Kanban の構成に合わせる。`extension / domain / parser / sync / webview / tests / docs` を使い、`App/Core` は使わない
+- 依存方向や責務境界は Weekly Kanban の構成に合わせる。`plugin / presentation / sync / parser / domain / tests / docs` を使い、`App/Core` は使わない
 
 ## Workflow Terms
 

@@ -1,38 +1,39 @@
-<!-- Weekly Kanban VS Code拡張機能 向け Copilot カスタム指示 -->
+<!-- Weekly Kanban Obsidian Plugin 向け Copilot カスタム指示 -->
 
 ## プロジェクト概要
-- **プロジェクト**: Weekly Kanban - Markdown Sync VS Code Extension
+- **プロジェクト**: Weekly Kanban - Obsidian Plugin
 - **言語**: TypeScript / Node.js
-- **対象**: VS Code 1.85.0+
-- **データモデル**: Markdown + Frontmatter（信頼できる情報源）↔ Kanban Webview（双方向同期）
+- **対象**: Obsidian 1.4.0+
+- **データモデル**: Markdown + Frontmatter（信頼できる情報源）↔ Kanban ItemView（双方向同期）
 
 ## アーキテクチャ原則
 
 ### 0. コアの依存方向
-- Extension → Core（parser, sync, domain） → Utilities
-- Core から Extension や Utilities への逆方向依存は禁止
+- Obsidian Plugin Layer → Presentation Layer → Sync & Orchestration Layer → Parser Layer → Domain Layer
+- 下位層から上位層への逆方向依存は禁止
 
 ### 1. レイヤー分離
-- **プレゼンテーション層** (extension.ts, webview/): VS Code API連携、コマンド処理、UI描画
-- **ドメイン層** (domain/): Kanbanデータモデル、ビジネスロジック、外部依存なし
+- **プラグイン層** (main.ts): Obsidian API連携、コマンド/リボン/ビュー登録
+- **プレゼンテーション層** (presentation/): ItemView、Modal、Notice によるUI描画
+- **同期層** (sync/): Vault変更検知、変更適用、競合検知
 - **パーサー層** (parser/): Markdown ↔ Kanban 変換、可逆性の保証
-- **同期層** (sync/): ファイル変更検知、変更の適用、競合検知
+- **ドメイン層** (domain/): Kanbanデータモデル、ビジネスロジック、外部依存なし
 
 ### 2. Markdown → Kanban のデータフロー
-```
-Markdown File → Parser (parse) → Domain Model → Sync (observe) → Webview Render
+```text
+Markdown File → Parser (parse) → Domain Model → Sync (observe) → ItemView Render
 ```
 
 ### 3. Kanban → Markdown のデータフロー
-```
-Webview (user edit) → Sync (generate changeset) → Parser (apply) → Markdown File
+```text
+ItemView / Modal (user edit) → Sync (generate changeset) → Parser (apply) → Markdown File
 ```
 
 ## 実装上の制約
 
 ### 非機能要件
 - Markdownの可逆性: 元のコメント、未知の行、空白を保持すること
-- パフォーマンス: 10MBファイルのパース1秒未満、Webview描画200ms未満、保存から同期まで500ms未満
+- パフォーマンス: 10MBファイルのパース1秒未満、Kanban再描画200ms未満、保存から同期まで500ms未満
 - アクセシビリティ: Kanban UIはWCAG 2.1 AA準拠
 - 正規表現タイムアウト: いかなるパターン評価も最大250ms
 
@@ -42,17 +43,21 @@ Webview (user edit) → Sync (generate changeset) → Parser (apply) → Markdow
 
 ### コード品質基準
 - 厳格なTypeScript（明示的な正当化なしに`any`を使用しない）
-- エラー処理: 不正な入力でクラッシュしないこと。代わりにStatusMessageを返す
+- エラー処理: 不正な入力でクラッシュしないこと。代わりにResultメッセージを返し、UIではNoticeで通知する
 - テスト: 
   - パーサー単体テスト（可逆性）: カバレッジ75%以上
   - ドメイン層テスト: カバレッジ70%以上
-  - 全体（MVP目標）: カバレッジ40%以上（Sync/Webviewはv0.1でテスト）
+   - 全体（MVP目標）: カバレッジ40%以上（Sync/Presentationはv0.1でテスト）
   - パフォーマンスベンチマーク: 10MBパース1秒未満、1000カード描画200ms未満
 
 ## ファイル構成
 ```
 src/
-  extension.ts          # メインエントリ、activation events、コマンドハンドラ
+   main.ts               # メインエントリ、コマンド/リボン/ビュー登録
+   presentation/
+      kanbanView.ts       # ItemView ホスト
+      cardModal.ts        # カード編集モーダル
+      fileSelectModal.ts  # 対象ファイル選択モーダル
   domain/
     kanban.ts           # Kanbanデータ構造 (Board, Column, Card)
     markdown.ts         # Markdown Frontmatter & セクションモデル
@@ -60,11 +65,8 @@ src/
     markdownParser.ts   # M→K 変換
     kanbanWriter.ts     # K→M 変換（可逆）
   sync/
-    fileWatcher.ts      # Markdown変更の監視
+      vaultWatcher.ts     # Markdown変更の監視
     syncEngine.ts       # 双方向の変更適用
-  webview/
-    webviewPanel.ts     # Kanban UIホスト
-    webviewContent.ts   # ボード表示用HTML + CSS + JS
   test/
     parser.test.ts
     sync.test.ts
@@ -88,7 +90,7 @@ src/
 ### パス・参照規約
 - `.github/` 配下から `doc/` を参照するときは `../doc/...` を使う
 - `.github/` 配下から同階層ファイルを参照するときは `.github/...` ではなく相対パスを使う。例: `AGENTS.md`
-- 依存方向や責務境界は Weekly Kanban の構成に合わせ、`extension / domain / parser / sync / webview / tests / docs` を使い、`App/Core` は使わない
+- 依存方向や責務境界は Weekly Kanban の構成に合わせ、`plugin / presentation / sync / parser / domain / tests / docs` を使い、`App/Core` は使わない
 
 ### 用語統一
 - 検証観点は `通常系 / 異常系 / 境界系` で統一する
@@ -145,7 +147,7 @@ Relates to: Requirements FR-SYNC-01, FR-KB-02
 
 4. **メッセージとしてのエラー**: 不正な入力でも例外をスローしない。
    - `{ status: 'error', message: 'Invalid Frontmatter at line 5' }` を返す
-   - VS Code通知に表示する
+   - UI通知は Notice に表示する
 
 5. **非同期同期**: ファイル監視と保存は非同期。連続編集にはデバウンスを使用する。
    - デバウンス: Kanban → Markdown書き込みは300ms
@@ -175,7 +177,7 @@ Relates to: Requirements FR-SYNC-01, FR-KB-02
 ## デプロイ・バージョニング
 
 - **バージョン形式**: SemVer (MAJOR.MINOR.PATCH)
-- **リリース**: mainブランチにタグ付け、GitHub Release + .vsixアーティファクト
+- **リリース**: mainブランチにタグ付け、GitHub Release + Obsidian plugin artifact
 - **CI**: pushごとにGitHub Actions（lint, test, coverage, build）を実行
 
 ## 関連ファイル・参照
@@ -186,7 +188,6 @@ Relates to: Requirements FR-SYNC-01, FR-KB-02
 - [Requirements_Specification.md](../doc/Requirements_Specification.md): FR/NFR/ACマトリクス
 - [Design_Specification.md](../doc/Design_Specification.md): アーキテクチャ & データモデル
 - [Verification_Spec&Result.md](../doc/Verification_Spec&Result.md): テスト計画 & 結果
-- [User_Manual.md](../doc/User_Manual.md): ユーザー操作 & キーバインド
 
 ## Skill 利用指針
 

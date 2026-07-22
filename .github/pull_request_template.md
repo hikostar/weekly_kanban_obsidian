@@ -89,7 +89,7 @@
 - [ ] Verified no breaking changes to existing APIs
 - [ ] Confirmed parser reversibility (Markdown ↔ Kanban) preserved
 - [ ] Checked sync timing doesn't exceed 500ms threshold
-- [ ] Validated error handling returns StatusMessage, not exceptions
+- [ ] Validated error handling returns Result/Notice-based messages, not exceptions
 
 ## Additional Notes
 
